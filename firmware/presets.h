@@ -79,6 +79,14 @@ static const preset_t PRESETS[] = {
                  {"drive", 0.6f}, {"fenv_amount", 2.5f}, {"fenv_decay", 0.45f}, {"fenv_sustain", 0.3f},
                  {"aenv_sustain", 0.9f}, {"aenv_release", 0.2f}, {"glide", 0.04f}, {"glide_legato", 1},
                  {"delay_mix", 0.15f}, {"volume", 0.26f})},
+    /* a Juno pad: two pulses a few cents apart, both swept by the slow LFO, a little sub, the OTA
+       cascade dark and opening with the swell, Juno I+II and a long room */
+    {"PWM PAD", P({"filter", 3}, {"osc1_shape", 0.333f}, {"osc1_pw", 0.5f}, {"osc2_shape", 0.333f}, {"osc2_pw", 0.35f},
+                  {"osc2_level", 0.7f}, {"osc2_fine", 6}, {"sub_level", 0.3f}, {"lfo1_rate", 0.35f}, {"lfo1_pwm", 0.75f},
+                  {"cutoff", 800}, {"resonance", 0.2f}, {"fenv_amount", 1.2f}, {"fenv_attack", 1.4f},
+                  {"fenv_decay", 2}, {"fenv_sustain", 0.6f}, {"aenv_attack", 0.9f}, {"aenv_sustain", 1},
+                  {"aenv_release", 1.6f}, {"vintage", 0.5f}, {"chorus", 3}, {"chorus_mix", 0.8f},
+                  {"reverb_mix", 0.3f}, {"reverb_time", 0.65f}, {"volume", 0.49f})},
 };
 
 #define NPRESETS (sizeof PRESETS / sizeof PRESETS[0])

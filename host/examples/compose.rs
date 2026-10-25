@@ -1,5 +1,6 @@
 //! A short piece on the factory patches: RING BELL arpeggiating (two copies taking turns, so each
-//! bell rings on under the next), PWM CHORUS on a slow melody, FAT BASS under them. D minor,
+//! bell rings on under the next), PWM CHORUS on a slow melody, FAT BASS under them, PWM PAD
+//! swelling in for the climb (bar 17) on F, the note Dm, Bb and F share, E under the C. D minor,
 //! Dm - Bb - F - C a bar each, 84 BPM. Each part rendered by its own synth, mixed, peak at -1 dBFS.
 //!
 //! The bells' second oscillator is a twelfth up (the preset's is a fifth and 30 cents): ring
@@ -122,15 +123,19 @@ fn main() {
     ];
     let melody: Vec<Note> = tune.iter().map(|&(at, len, n)| (at, len * 0.97, n, 0.8)).collect();
 
+    // the pad: bars 17-19 F4, bar 20 E4 (the C), bars 21-23 F4 again, released with the last bells
+    let pad: Vec<Note> = vec![(64.0, 11.9, 65, 0.8), (76.0, 3.9, 64, 0.8), (80.0, 11.0, 65, 0.8)];
+
     let total = bars as f64 * 4.0 * BEAT + 4.0; // and the tails
     let down = |v: &[Note]| v.iter().map(|&(a, l, n, vel)| (a, l, n - 12, vel)).collect::<Vec<Note>>();
     let (bell_a, bell_b) = (down(&bell_a), down(&bell_b));
     let bell: &[(&str, f32)] = &[("osc2_semi", 19.0), ("osc2_fine", 0.0)];
-    let parts: [(&str, &[(&str, f32)], &[Note], f32, f32); 4] = [
+    let parts: [(&str, &[(&str, f32)], &[Note], f32, f32); 5] = [
         ("RING BELL", bell, &bell_a, 0.42, -0.35), // gain, pan (-1 left .. 1 right)
         ("RING BELL", bell, &bell_b, 0.42, 0.35),
         ("PWM CHORUS", &[], &melody, 0.62, 0.0),
         ("FAT BASS", &[], &bass, 0.7, 0.0),
+        ("PWM PAD", &[], &pad, 0.45, 0.0),
     ];
     let n = (total * FM1_RATE as f64) as usize;
     let (mut l, mut r) = (vec![0.0f32; n], vec![0.0f32; n]);
