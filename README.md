@@ -12,7 +12,7 @@ to recover a unit whose update was cut off.
 
 ## Install
 
-The update package, `monohull.fwsc`, is on the [releases page](../../releases). Load it into
+The update package, `monohull.fwsc` (identity `FM-1_928`), is on the [releases page](../../releases). Load it into
 Harbor or fm1-emu, or install it on an FM-1 over USB with Felucca's installer:
 
 ```sh

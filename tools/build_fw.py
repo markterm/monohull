@@ -28,7 +28,7 @@ CLANG, LD, OBJCOPY, OBJDUMP, NM = (TC / "bin" / (n + EXE) for n in
                                    ("clang", "pi32v2-ld", "llvm-objcopy", "llvm-objdump", "pi32v2-nm"))
 LIB = TC / "pi32v2-lib" / "r3"
 BASE, SLOT = 0x02000120, 0x8DFBC
-PRODUCT = "FM-1_900"            # the identity Felucca's own development builds carry
+PRODUCT = "FM-1_928"            # Monohull's own identity (free in thefirmwarehub.com's catalogue, 2026-10-25)
 DSP = ["mh_osc", "mh_resample", "mh_ladder", "mh_diode", "mh_svf", "mh_env", "mh_lfo", "mh_chorus", "mh_reverb", "mh_delay", "mh_ota", "mh_k35", "mh_synth", "mh_params",
        "mh_tables"]
 CC = [str(CLANG), "-target", "pi32v2", "-mcpu=r3", "-mfprev1", "-ffp-contract=off"]
