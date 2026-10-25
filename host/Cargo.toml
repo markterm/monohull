@@ -1,0 +1,17 @@
+[package]
+name = "monohull-host"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Host build of Monohull's DSP: tests against references, demo renders"
+
+[workspace]
+
+[dependencies]
+rustfft = "6"
+
+[build-dependencies]
+cc = "1"
+
+[profile.test]
+opt-level = 2

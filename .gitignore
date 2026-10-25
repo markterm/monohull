@@ -1,0 +1,11 @@
+# build outputs and renders
+build/
+host/target/
+host/out/
+tools/gen-tables/target/
+__pycache__/
+
+# JieLi's AC79 SDK files (Apache-2.0): tools/build_fw.py downloads them and checks their hashes
+ext/ac79sdk/
+# a local copy of files from Felucca's main branch, kept for reference
+ext/felucca-main/

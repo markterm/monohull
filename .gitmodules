@@ -1,0 +1,3 @@
+[submodule "ext/Felucca"]
+	path = ext/Felucca
+	url = https://github.com/hugelton/Felucca
