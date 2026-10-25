@@ -91,16 +91,20 @@ def build_app():
             CC + ["-c", FW / "hal" / "fm1_isr.S", "-o", OUT / "fm1_isr.o"],
             CC + ["-c", ROOT / "firmware" / "fm1_cpu1.S", "-o", OUT / "fm1_cpu1.o"],
             CC + CF + [f"-I{FW / 'hal'}", f"-I{ROOT / 'dsp'}", f"-I{OUT}", "-c", ROOT / "firmware" / "main.c",
-                       "-o", OUT / "main.o"]]
+                       "-o", OUT / "main.o"],
+            # USB and the update path at -Os: Dinghy's docs/API.md, USB-MIDI IN misbehaved built at -O2
+            CC + [c if c != "-O2" else "-Os" for c in CF] + [f"-I{FW / 'hal'}", f'-DFELUCCA_ID="{PRODUCT}"', "-c",
+                                                             ROOT / "firmware" / "usb_ota.c", "-o", OUT / "usb_ota.o"]]
     jobs += [CC + CF + ["-c", ROOT / "dsp" / f"{n}.c", "-o", OUT / f"{n}.o"] for n in DSP]
     with ThreadPoolExecutor(8) as ex:
         list(ex.map(run, jobs))
-    objs = [OUT / f"{n}.o" for n in ["crt0", "fm1_vec", "fm1_isr", "fm1_cpu1", "main", *DSP]]
+    objs = [OUT / f"{n}.o" for n in ["crt0", "fm1_vec", "fm1_isr", "fm1_cpu1", "main", "usb_ota", *DSP]]
     elf = OUT / "monohull.elf"
     run([LD, "--gc-sections", "-T", ROOT / "firmware" / "app.ld", "-e", "_start", *objs,
          "--start-group", LIB / "libm.a", LIB / "libc.a", LIB / "libcompiler_rt.a", "--end-group", "-o", elf])
     run([OBJCOPY, "-O", "binary", "-j", ".text", elf, OUT / "text.bin"])
     run([OBJCOPY, "-O", "binary", "-j", ".c1_text", elf, OUT / "c1.bin"])
+    run([OBJCOPY, "-O", "binary", "-j", ".ram_text", elf, OUT / "rt.bin"])
     run([OBJCOPY, "-O", "binary", "-j", ".data", elf, OUT / "data.bin"])
     (OUT / "monohull.dis").write_text(run([OBJDUMP, "-d", elf]))
     nm = {}
@@ -108,9 +112,9 @@ def build_app():
         p = ln.split()
         if len(p) == 3:
             nm[p[2]] = int(p[0], 16)
-    # each section at its load address in the flash: .text, core 1's waiting loop, .data
+    # each section at its load address in the flash: .text, core 1's waiting loop, the flash driver, .data
     img = bytearray()
-    for name, at in (("text", BASE), ("c1", nm["_c1_load"]), ("data", nm["_data_load"])):
+    for name, at in (("text", BASE), ("c1", nm["_c1_load"]), ("rt", nm["_rt_load"]), ("data", nm["_data_load"])):
         part = (OUT / f"{name}.bin").read_bytes()
         assert at - BASE >= len(img), f"{name} overlaps the section before it"
         img += b"\xff" * (at - BASE - len(img)) + part

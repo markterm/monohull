@@ -11,8 +11,11 @@
  * filter, ENV envelopes, LFO LFOs, FX unison, chorus, reverb and delay (held: every effect off
  * and on, DRY in the footer, to hear a patch bare), GLO voice, SEQ the mod matrix. ARP
  * turns the arpeggiator on and off and shows its page. PLAY: all notes off. Hold OCT- and OCT+
- * for 3 s: the USB update mode. MIDI in on the TRS jack (omni): notes, velocity, bend, mod
- * wheel, sustain, channel pressure, clock and start / stop, and the CCs in dsp/mh_params.c.
+ * for 3 s: the USB update mode. MIDI in on the TRS jack and USB (omni): notes, velocity, bend,
+ * mod wheel, sustain, channel pressure, clock and start / stop, and the CCs in dsp/mh_params.c.
+ *
+ * USB (usb_ota.c, Dinghy's platform): a class-compliant USB-MIDI device, "FM-1 Monohull", that
+ * answers the installers' identity handshake and lets them install another firmware over this one.
  *
  * Load: the audio interrupt's time is measured every half buffer; the main loop adds the
  * extras (unison voices, the stereo filter, the chorus, the delay and reverb, the filters at
@@ -35,6 +38,7 @@
 #include "fm1_input.h"
 #include "fm1_adc.h"
 #include "fm1_uart.h"
+#include "usb_ota.h"
 
 #include "mh_params.h"
 #include "mh_synth.h"
@@ -84,6 +88,7 @@ typedef struct { uint8_t on, note, vel; } ev_t;
 static ev_t evq[NEV];
 static volatile uint32_t ev_head, ev_tail;
 static volatile uint8_t panic_req;
+static volatile uint8_t updating;           /* an update is staging: render nothing (usb_ota.c) */
 
 static void post(uint32_t on, uint32_t note, uint32_t vel)
 {
@@ -167,8 +172,22 @@ static void midi_byte(uint32_t b)
         midi_msg(um_st, b, 0);
 }
 
+/* USB-MIDI event packets (cable, code index | status << 8 | d1 << 16 | d2 << 24) */
+static void usb_midi_poll(void)
+{
+    uint32_t pk, st;
+    while (plat_midi_get(&pk)) {
+        st = (pk >> 8) & 0xFFu;
+        if (st >= 0xF8u)
+            midi_byte(st);
+        else if (st >= 0x80u && st < 0xF0u)
+            midi_msg(st, (pk >> 16) & 0x7Fu, (pk >> 24) & 0x7Fu);
+    }
+}
+
 static void midi_poll(void)
 {
+    usb_midi_poll();
     um_pend += fm1_uart1_rx_take();
     if (um_pend > UM_RING) {                /* overrun: drop to the newest bytes, wait for a status */
         um_rd = (um_rd + um_pend - UM_RING) & (UM_RING - 1u);
@@ -190,6 +209,13 @@ void fm1_alnk0_irq(void)
         uint32_t t0 = fm1_ticks(), i, dt;
         int32_t *o = &abuf[fm1_audio_free_half() * HALF_WORDS];
         float g = OUT_SCALE * (float)master_q12 * (1.f / 4096.f);
+        if (updating) {
+            for (i = 0; i < HALF_WORDS; i++)
+                o[i] = 0;
+            fm1_audio_ack_half();
+            isr_halves++;
+            return;
+        }
         midi_poll();
         while (ev_tail != ev_head) {
             ev_t e = evq[ev_tail % NEV];
@@ -223,10 +249,14 @@ void fm1_alnk0_irq(void)
 
 void fm1_timer5_irq(void)
 {
-    static uint32_t last, acc;
+    static uint32_t last, acc, sub;
     uint32_t now;
     fm1_timer5_ack();
     fm1_input_tick();
+    if (++sub == 5u) {                      /* USB at 2 kHz, nested in a render too (as Dinghy's MIDI-only build) */
+        sub = 0;
+        plat_usb_poll();
+    }
     now = fm1_ticks();
     acc += now - last;
     last = now;
@@ -735,6 +765,58 @@ static void fm1_fault(const fm1_crash_t *c)
     fm1_reboot();
 }
 
+/* the stock USB update mode (OCT- and OCT+ held, or the installer's soft key) */
+static void uboot(void)
+{
+    fm1_audio_stop();
+    bootguard.pending = 0;
+    plat_detach();
+    fm1_enter_uboot();
+}
+
+/* ---------------------------------------------------------------- an update over USB --- */
+/* usb_ota.c's hooks: the installer stages the next firmware's loader while this one stays silent */
+uint32_t plat_ms(void) { return ms; }
+
+void plat_update_begin(void)
+{
+    uint32_t h = isr_halves, t0 = fm1_ticks();
+    updating = 1;
+    while (isr_halves - h < 2u && fm1_ticks() - t0 < 50u * 24000u)
+        fm1_wdt_feed();                     /* both halves silent before the flash stops the audio ISR */
+}
+
+void plat_update_end(void)
+{
+    updating = 0;
+    panic_req = 1;
+    dirty = 1;
+}
+
+void plat_update_screen(uint32_t step, int32_t code)
+{
+    static const char *const STEP[] = {"", "PACKAGE", "CHECK HEAD", "LOADER", "CONFIRM", "RESTART"};
+    char b[16];
+    fill(0, 0, 240, 240, C_BG);
+    text(92, 96, "UPDATE", C_TEXT);
+    if (step < 9u) {
+        text(120 - 4 * (int)strlen_(STEP[step < 6u ? step : 0]), 124, STEP[step < 6u ? step : 0], C_AMBER);
+    } else {
+        cat(fmt_u(cat(b, code == 1 ? "DRY RUN OK " : "FAILED -"), (uint32_t)(code < 0 ? -code : 0)), "");
+        text(120 - 4 * (int)strlen_(b), 124, b, C_RED);
+        lcd_frame();
+        fm1_delay_ms(1500);
+        return;
+    }
+    lcd_frame();
+}
+
+void plat_reset_prep(void)
+{
+    fm1_audio_stop();
+    bootguard.pending = 0;
+}
+
 /* ------------------------------------------------------------------------------- the UI --- */
 static void keys(uint32_t e, uint32_t rel)
 {
@@ -839,6 +921,7 @@ static void fm1_main(void)
     mh_synth_init(&syn, RATE, 0x4D4F4E4Fu);
     load_preset(0);
     apply_extras();
+    plat_start();                           /* USB, and a staging area an update left behind */
 #ifndef MH_ONE_CORE
     core1_up();
 #endif
@@ -855,6 +938,8 @@ static void fm1_main(void)
         }
         last_ui = now;
         fm1_wdt_feed();
+        if (plat_service())                 /* MIDI's identity handshake and updates; 1: the soft key */
+            uboot();
         if (bootguard.pending && now > 30000u)
             bootguard.pending = bootguard.failed = 0;   /* 30 s up: this boot made it */
         e = fm1_input_edges(&rel);
@@ -868,11 +953,8 @@ static void fm1_main(void)
         if ((fm1_in.buttons & 3u) == 3u) {
             if (!hold)
                 hold = now;
-            else if (now - hold > 3000u) {
-                fm1_audio_stop();
-                bootguard.pending = 0;
-                fm1_enter_uboot();
-            }
+            else if (now - hold > 3000u)
+                uboot();
         } else {
             hold = 0;
         }
@@ -890,6 +972,7 @@ static void fm1_main(void)
 void fm1_cstart(void)
 {
     extern uint32_t _bss_start[], _bss_end[], _data_start[], _data_end[], _data_load[];
+    extern uint32_t _rt_start[], _rt_end[], _rt_load[];
     uint32_t *w;
     cpu1_halt();
     fm1_time_init();
@@ -910,6 +993,9 @@ void fm1_cstart(void)
         *w = 0;
     for (w = _data_start; w < _data_end; w++)
         *w = _data_load[w - _data_start];
+    for (w = _rt_start; w < _rt_end; w++)  /* the flash driver */
+        *w = _rt_load[w - _rt_start];
+    __asm__ volatile("csync" ::: "memory");
     fm1_mailbox_clear();
     fm1_main();
 }

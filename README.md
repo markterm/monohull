@@ -21,9 +21,14 @@ pip install mido python-rtmidi
 python ext/Felucca/tools/fm1_install.py monohull.fwsc
 ```
 
-Holding OCT- and OCT+ for 3 s puts it in USB update mode, as in every Felucca-based firmware, so
-another firmware (or M-VAVE's own) installs over it the usual way; three failed boots in a row
-start update mode too.
+Over USB it is a class-compliant MIDI device, "FM-1 Monohull" (identity `FM-1_928`), so a computer
+can play it, and the installers (Felucca's web installer, the Firmware Hub, `fm1_install.py`) install
+another firmware over it as they do over Felucca. If that ever fails, hold OCT- and OCT+ for 3 s
+for the FM-1's own USB update mode; three failed boots in a row start it too.
+
+Monohull keeps nothing in the flash: no saved patches yet, and it never reads, changes or erases
+another firmware's projects or samples (the only part of the flash it may write is the update's
+staging area).
 
 ## Layout
 
@@ -45,6 +50,8 @@ dsp/                 the synth in C99: no HAL, no allocation, no libm in the aud
   mh_tables          generated: BLEP / BLAMP tables, halfband coefficients
 host/                the same C built for the host (MSVC via cargo): tests, references, demos
 firmware/            the FM-1 firmware: main.c (panel, pages, scheduler, core 1), presets.h
+  usb_ota.c          USB-MIDI and the update path: Dinghy's platform code (plat/, hal/), by zvenson
+                     after Felucca, SLOOP and OberVave (GPL-3.0)
 ext/                 sources the ports are checked against (Mutable's, Surge's, Open303's) and
                      Felucca (a submodule: its hardware layer, startup and update loader)
 tools/build_fw.py    builds the firmware and its update package

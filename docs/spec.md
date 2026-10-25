@@ -912,3 +912,15 @@ unison-heavy patches back.
   - Load (fwload.py, every patch): twelve settle at X7 (effects and the filters at 4x) at 29-60 %;
     SUPERSAW at X5 (77 %). The filter's own function had to be forced inline: as a call (four a
     frame) it put SUPERSAW's X5 over 80 %.
+  - **USB (2026-10-25).** A class-compliant USB-MIDI device ("FM-1 Monohull") with the update
+    path the installers use: Dinghy's platform code (`firmware/usb_ota.c`: `plat/usb.c`,
+    `plat/ota.c`, the RAM flash driver), built on its own at -Os. It answers the identity
+    handshake as `FM-1_928` (free in the Firmware Hub's catalogue), stages the next firmware's
+    loader when an installer asks (the audio silent meanwhile) and takes the UBOOT soft key. The
+    flash driver may write only the update's staging area. USB is polled from TIMER5 at 2 kHz;
+    its MIDI goes to the synth with the TRS jack's. fm1-emu has no USB controller, so this is
+    untested there beyond booting and the load: with USB in, thirteen patches settle at X7 at
+    27-57 % and SUPERSAW at X5 (78 %), as before.
+  - **PWM PAD (2026-10-25):** a Juno pad (two detuned pulses swept by the slow LFO, a little
+    sub, the OTA cascade opening with a 0.9 s swell, Juno I+II, a long room), -15 LUFS, X7 at
+    50 %. It joins the piece (`examples/compose.rs`) for the climb from bar 17.
