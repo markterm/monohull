@@ -920,7 +920,7 @@ unison-heavy patches back.
     flash driver may write only the update's staging area. USB is polled from TIMER5 at 2 kHz;
     its MIDI goes to the synth with the TRS jack's. fm1-emu has no USB controller, so this is
     untested there beyond booting and the load: with USB in, thirteen patches settle at X7 at
-    27-57 % and SUPERSAW at X5 (78 %), as before.
+    27-57 % and SUPERSAW at X5 (78 %), as before. Tested on a real FM-1 on 2026-10-26.
   - **PWM PAD (2026-10-25):** a Juno pad (two detuned pulses swept by the slow LFO, a little
     sub, the OTA cascade opening with a 0.9 s swell, Juno I+II, a long room), -15 LUFS, X7 at
     50 %. It joins the piece (`examples/compose.rs`) for the climb from bar 17.
