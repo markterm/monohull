@@ -6,9 +6,8 @@ ladder, OTA cascade, Sallen-Key, state-variable), unison, chorus, delay and reve
 scheduler that spends whatever CPU the patch leaves over on the extras. The design, its
 references and its measurements are in [docs/spec.md](docs/spec.md).
 
-**Status:** it runs in fm1-emu and in Harbor (an FM-1 emulator for Android), but it has not
-been run on a real FM-1 yet. Installing it on one is at your own risk; Felucca's README says how
-to recover a unit whose update was cut off.
+**Status:** tested on a real FM-1, and it runs in fm1-emu and in Harbor (an FM-1 emulator for
+Android). Felucca's README says how to recover a unit whose update was cut off.
 
 ## Install
 
