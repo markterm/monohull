@@ -85,3 +85,5 @@ cargo run --release --manifest-path ../tools/gen-tables/Cargo.toml   # from the 
 
 Licence: GPL-3.0 (the firmware builds on Felucca's GPL-3.0 HAL). Borrowed designs and their
 licences are credited in the source and in the spec's references.
+
+You can also try Monohull in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
